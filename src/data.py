@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import uuid
 from datetime import datetime, timedelta
 
 
@@ -391,3 +392,77 @@ def detect_suspicious_users(transactions: pd.DataFrame,
         )
 
     return pd.DataFrame(results)
+
+def generate_random_checks_dataframe(
+    n_rows: int = 1000,
+    decision_threshold: float = 0.5,
+    start_date: datetime = None,
+    end_date: datetime = None,
+) -> pd.DataFrame:
+    """
+    Generate a random dataframe simulating identity checks with the fields:
+    check_id, user_id, check_type, created_at, model_score, ground_truth, decision.
+
+    Parameters
+    ----------
+    n_rows : int
+        Number of rows to generate.
+    decision_threshold : float
+        Threshold used to simulate the 'decision' column (accepted vs rejected).
+    start_date : datetime
+        Start of the date range for created_at.
+    end_date : datetime
+        End of the date range for created_at.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        Randomly generated dataframe.
+    """
+
+    # Set default date window if not provided
+    if start_date is None:
+        start_date = datetime.now() - timedelta(days=30)
+    if end_date is None:
+        end_date = datetime.now()
+
+    # Random timestamps
+    created_at = pd.to_datetime(
+        np.random.randint(
+            int(start_date.timestamp()),
+            int(end_date.timestamp()),
+            size=n_rows
+        ),
+        unit="s"
+    )
+
+    # Random ground truth distribution
+    ground_truth_values = np.random.choice(
+        ["genuine", "fraud"], 
+        size=n_rows, 
+        p=[0.85, 0.15]  # typical imbalance
+    )
+
+    # Model score: genuine should have slightly higher scores
+    model_score = np.where(
+        ground_truth_values == "genuine",
+        np.random.normal(loc=0.75, scale=0.15, size=n_rows),
+        np.random.normal(loc=0.30, scale=0.15, size=n_rows)
+    )
+    model_score = np.clip(model_score, 0, 1)
+
+    # Simulate decisions using a threshold (legacy rules)
+    decision = np.where(model_score >= decision_threshold, "accepted", "rejected")
+
+    # Create DataFrame
+    df = pd.DataFrame({
+        "check_id": [str(uuid.uuid4()) for _ in range(n_rows)],
+        "user_id": np.random.randint(1, 5000, size=n_rows),
+        "check_type": np.random.choice(["id_document", "selfie"], size=n_rows),
+        "created_at": created_at,
+        "model_score": model_score,
+        "ground_truth": ground_truth_values,
+        "decision": decision
+    })
+
+    return df
