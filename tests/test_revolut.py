@@ -45,7 +45,7 @@ def test_detect_suspicious_users(shared_dataframes: pd.DataFrame):
     transactions_df, _ = shared_dataframes
 
     # Call detection function
-    suspicious_df = detect_suspicious_users(transactions_df)
+    suspicious_df = detect_suspicious_users(transactions_df, min_failures=2)
 
     # Basic assertions to verify output structure
     assert suspicious_df is not None
